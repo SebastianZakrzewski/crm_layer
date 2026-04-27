@@ -1,0 +1,50 @@
+---
+description: Clean TypeScript and NestJS API coding standards for this project
+alwaysApply: true
+---
+
+# TypeScript and NestJS API standards
+
+Apply these standards whenever generating, correcting, or refactoring TypeScript/NestJS API code in this repo.
+
+## Language and structure
+
+- Use English for all code, comments, and documentation.
+- Always declare parameter, variable, property, and return types.
+- Avoid `any`; create explicit domain types, interfaces, DTOs, or generics.
+- Add JSDoc for public classes and public methods.
+- Keep one export per file.
+- Avoid blank lines inside function bodies.
+- Prefer immutable data with `readonly` and `as const`.
+
+## Naming
+
+- Use `PascalCase` for classes and interfaces.
+- Use `camelCase` for variables, functions, methods, and properties.
+- Use `kebab-case` for files and directories.
+- Use `UPPERCASE` for environment variables and constants.
+- Start function and method names with a verb.
+- Name booleans with `is`, `has`, `can`, or `should`.
+- Prefer complete words; only use standard abbreviations such as API, URL, DTO, i, j, err, ctx, req, res, and next.
+
+## Functions and classes
+
+- Keep functions short, single-purpose, and below 20 instructions.
+- Avoid nested blocks with early returns and extracted helpers.
+- Use `map`, `filter`, and `reduce` where they make the code clearer.
+- Use arrow functions only for simple functions under 3 instructions; otherwise use named functions.
+- Prefer default parameter values over null or undefined checks.
+- Use RO-RO: pass and return objects when a function needs multiple values.
+- Keep one level of abstraction per function.
+- Follow SOLID and prefer composition over inheritance.
+- Keep classes focused, below 10 public methods and below 10 properties.
+
+## Errors and tests
+
+- Use exceptions for unexpected errors.
+- Catch errors only to fix an expected problem, add context, or rethrow.
+- Rely on global NestJS exception filters for cross-cutting error handling.
+- Use Jest for tests.
+- Write unit tests for every public controller and service method.
+- Use Arrange-Act-Assert in unit tests and Given-When-Then in acceptance or e2e tests.
+- Name test values clearly: `inputUser`, `mockRepository`, `actualResult`, `expectedResult`.

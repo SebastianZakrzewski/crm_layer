@@ -1,0 +1,50 @@
+---
+description: NestJS modular architecture, @app/common, and API module conventions
+alwaysApply: true
+---
+
+# NestJS Modular Architecture
+
+Apply this structure when creating or changing NestJS API modules.
+
+## API Modules
+
+- Use modular architecture with one primary module per main domain or route.
+- Keep each main route behind one primary controller; add secondary controllers only for secondary routes.
+- Keep business logic and persistence out of controllers.
+- Put input DTOs, output types, and module models in a local `models` folder.
+- Validate input DTOs with `class-validator`.
+- Prefer simple explicit output types over leaking entities through controllers.
+- Put business logic in services.
+- Use one service per entity or aggregate when persistence is involved.
+- Use MikroORM entities for persistence when adding database-backed models.
+- Add an `admin/test` method to each controller as a smoke test endpoint.
+
+## Common Module
+
+- Put shared reusable code in `@app/common`.
+- Use `@app/common/configs` for global configuration settings.
+- Use `@app/common/decorators` for reusable custom decorators.
+- Use `@app/common/dtos` for shared DTOs.
+- Use `@app/common/guards` for reusable role or permission guards.
+- Use `@app/common/interceptors` for shared request or response processing.
+- Use `@app/common/notifications` for application-wide notification helpers.
+- Use `@app/common/services` for reusable services.
+- Use `@app/common/types` for shared TypeScript contracts.
+- Use `@app/common/utils` for pure helper functions.
+- Use `@app/common/validators` for reusable validation rules.
+
+## Core Cross-Cutting Behavior
+
+- Register global exception filters for consistent API error responses.
+- Register global middleware for request-level concerns.
+- Use guards for authentication, authorization, roles, and permissions.
+- Use interceptors for request processing, response mapping, logging, or timing.
+- Keep cross-cutting behavior in core/common infrastructure instead of duplicating it inside feature modules.
+
+## Testing
+
+- Write Jest tests for each controller and service.
+- Write e2e tests for each API module.
+- Use test doubles for expensive or stateful dependencies.
+- Prefer real third-party dependencies only when they are cheap, deterministic, and useful for confidence.
