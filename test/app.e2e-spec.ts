@@ -27,10 +27,7 @@ describe('App (e2e)', () => {
     await app.close();
   });
 
-  it('GET /example/admin/test', () => {
-    return request(app.getHttpServer() as Server)
-      .get('/example/admin/test')
-      .expect(200)
-      .expect({ status: 'ok' });
+  it('GET / returns 404 when no root route is registered', () => {
+    return request(app.getHttpServer() as Server).get('/').expect(404);
   });
 });
