@@ -1,4 +1,14 @@
-# Continuous integration: install dependencies, lint, test, production build.
+# CI: lint, test, build. Deploy: after successful CI on main (push), SSH to server → git sync + Docker.
+#
+# Required repository Secrets (Settings → Secrets and variables → Actions):
+#   SSH_HOST           — VPS hostname or IP
+#   SSH_USER           — SSH login (must have permission to docker and project dir)
+#   SSH_PRIVATE_KEY    — PEM of a key authorized in ~/.ssh/authorized_keys on the server (no passphrase)
+#   SSH_DEPLOY_PATH    — absolute path to repo on server (e.g. /opt/crm_layer), clone + docker compose live here
+# Notes:
+#   — Private repo on GitHub: configure a read-only deploy key (or HTTPS token) on the server so `git fetch` works.
+#   — SSH not on port 22: add under "with:" in the Deploy step: `port: YOUR_PORT`
+#   — Host key verification: see `host_key` in https://github.com/appleboy/ssh-action
 
 name: CI
 
@@ -8,16 +18,15 @@ on:
   pull_request:
     branches: [main]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
 
 jobs:
   ci:
     runs-on: ubuntu-latest
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
 
     strategy:
       matrix:
@@ -44,3 +53,31 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  deploy:
+    name: Deploy to server
+    needs: ci
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 20m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            DEPLOY="${{ secrets.SSH_DEPLOY_PATH }}"
+            cd "$DEPLOY"
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+            docker compose up -d --build
