@@ -1,0 +1,18 @@
+# CRM layer API — build and run locally or on a server.
+# GitHub CLI: non-interactive use requires GH_TOKEN (classic PAT with repo scope) or mount ~/.config/gh.
+# Example: GH_TOKEN=gph_xxx docker compose up -d
+
+services:
+  crm-layer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: crm-layer:local
+    ports:
+      - "${PORT:-3001}:3001"
+    environment:
+      PORT: "${PORT:-3001}"
+      BITRIX24_WEBHOOK_BASE_URL: "${BITRIX24_WEBHOOK_BASE_URL:-}"
+      # Optional PAT for gh inside the container (`docker compose exec crm-layer gh pr list`, etc.).
+      GH_TOKEN: "${GH_TOKEN:-}"
+    restart: unless-stopped
