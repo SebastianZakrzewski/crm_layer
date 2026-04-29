@@ -3,7 +3,8 @@
 # Required repository Secrets (Settings → Secrets and variables → Actions):
 #   SSH_HOST           — VPS hostname or IP
 #   SSH_USER           — SSH login (docker group or sudo for docker compose)
-#   SSH_PRIVATE_KEY    — PEM private key (no passphrase) allowed in authorized_keys on the server
+#   SSH_PRIVATE_KEY           — PEM private key matching authorized_keys on the server
+#   SSH_PRIVATE_KEY_PASSPHRASE — Optional: only if your key file is passphrase-protected
 #   SSH_DEPLOY_PATH    — absolute path to a directory that contains `docker-compose.prod.yml` and `.env` (no git clone required)
 # Optional Secrets (only if the GHCR package is private):
 #   GHCR_USERNAME       — GitHub username for docker login on the server
@@ -110,9 +111,9 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PRIVATE_KEY_PASSPHRASE }}
           envs: GHCR_USERNAME,GHCR_PULL_TOKEN
           command_timeout: 20m
-          script_stop: true
           script: |
             set -euo pipefail
             DEPLOY="${{ secrets.SSH_DEPLOY_PATH }}"
