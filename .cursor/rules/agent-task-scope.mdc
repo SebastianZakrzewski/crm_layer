@@ -1,0 +1,14 @@
+---
+description: Strict scope — implement only what the user asks; avoid unsolicited additions
+alwaysApply: true
+---
+
+# Task scope and user instructions
+
+When the user gives a task or instructions:
+
+- **Implement only what they explicitly request.** Do not extend scope with extra endpoints, files, refactors, tests, docs, or “while we’re here” changes unless they asked for those items or another **always-applied rule in this repo** explicitly requires them.
+- **Do not substitute your own product decisions** (e.g. additional APIs, smoke routes, or scaffolding for future features) when the user specified a narrower outcome—unless a conflicting rule in `.cursor/rules/` mandates it, in which case follow that rule and keep everything else minimal.
+- If requirements are ambiguous, **prefer the smallest change** that satisfies the stated goal, or ask a short clarifying question instead of guessing and building extra surface area.
+
+This complements “focused diffs” behavior: every change should trace directly to the user’s instructions plus non-negotiable project standards in this repository.
