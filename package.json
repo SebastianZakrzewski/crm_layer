@@ -54,17 +54,19 @@
   },
   "jest": {
     "moduleFileExtensions": ["js", "json", "ts"],
-    "rootDir": "src",
+    "rootDir": ".",
+    "roots": ["<rootDir>/src", "<rootDir>/test"],
     "testRegex": ".*\\.spec\\.ts$",
+    "testPathIgnorePatterns": ["/node_modules/", "/dist/"],
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
-    "collectCoverageFrom": ["**/*.(t|j)s"],
-    "coverageDirectory": "../coverage",
+    "collectCoverageFrom": ["src/**/*.(t|j)s"],
+    "coverageDirectory": "./coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
-      "^@app/common/(.*)$": "<rootDir>/common/$1",
-      "^@app/modules/(.*)$": "<rootDir>/modules/$1"
+      "^@app/common/(.*)$": "<rootDir>/src/common/$1",
+      "^@app/modules/(.*)$": "<rootDir>/src/modules/$1"
     }
   }
 }

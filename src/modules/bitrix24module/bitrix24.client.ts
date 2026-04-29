@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AbstractCrmClient } from '@app/common/clients/abstract-crm-client';
 import type { CrmCompany } from '@app/common/types/crm-company';
 import type { CrmCompanyCreateInput } from '@app/common/types/crm-company-create-input';
@@ -14,14 +15,78 @@ import type { CrmLeadCreateInput } from '@app/common/types/crm-lead-create-input
 import type { CrmLeadUpdateInput } from '@app/common/types/crm-lead-update-input';
 import type { CrmListOptions } from '@app/common/types/crm-list-options';
 import type { CrmListResult } from '@app/common/types/crm-list-result';
+import { mapBitrixDealRowToCrmDeal } from './map-bitrix-deal-row-to-crm-deal';
+
+/** Env key: full incoming webhook base URL up to the token segment (no trailing slash). */
+export const BITRIX24_WEBHOOK_BASE_URL_ENV = 'BITRIX24_WEBHOOK_BASE_URL' as const;
+
+type BitrixRestSuccess<T> = Readonly<{ readonly result: T }>;
+type BitrixRestFailure = Readonly<{
+  readonly error: string | number;
+  readonly error_description?: string;
+}>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 /**
- * Bitrix24 REST adapter for {@link AbstractCrmClient}. Methods are stubs until wired to Bitrix24 APIs.
+ * Bitrix24 REST adapter for {@link AbstractCrmClient}. Methods are implemented incrementally.
  */
 @Injectable()
 export class Bitrix24Client extends AbstractCrmClient {
+  public constructor(private readonly configService: ConfigService) {
+    super();
+  }
+
   private throwNotImplemented(methodName: string): never {
     throw new Error(`Bitrix24Client.${methodName} is not implemented yet.`);
+  }
+
+  private getWebhookBaseUrl(): string {
+    const raw = this.configService.get<string>(BITRIX24_WEBHOOK_BASE_URL_ENV);
+    if (raw === undefined || raw.trim() === '') {
+      throw new Error(`${BITRIX24_WEBHOOK_BASE_URL_ENV} is not configured.`);
+    }
+    return raw.replace(/\/+$/, '');
+  }
+
+  private parsePositiveIntId(entityLabel: string, id: string): number {
+    const trimmed = id.trim();
+    if (trimmed === '' || !/^\d+$/.test(trimmed)) {
+      throw new Error(`Bitrix24Client: invalid ${entityLabel} id "${id}".`);
+    }
+    const numeric = Number.parseInt(trimmed, 10);
+    if (numeric <= 0) {
+      throw new Error(`Bitrix24Client: invalid ${entityLabel} id "${id}".`);
+    }
+    return numeric;
+  }
+
+  private isDealNotFoundFailure(error: string | number, description: string): boolean {
+    const normalizedDescription = description.toLowerCase();
+    if (normalizedDescription.includes('not found')) {
+      return true;
+    }
+    const normalizedError = String(error).toLowerCase();
+    return normalizedError.includes('not_found') || normalizedError === '404';
+  }
+
+  private async postJson<T>(methodPath: string, body: Readonly<Record<string, unknown>>): Promise<T> {
+    const url = `${this.getWebhookBaseUrl()}/${methodPath}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    const parsed: unknown = await response.json();
+    if (!isRecord(parsed)) {
+      throw new Error('Bitrix24Client: unexpected non-object REST response.');
+    }
+    return parsed as T;
   }
 
   /** @inheritdoc */
@@ -80,9 +145,29 @@ export class Bitrix24Client extends AbstractCrmClient {
     this.throwNotImplemented('listDeals');
   }
 
-  /** @inheritdoc */
-  public getDeal(_dealId: string): Promise<CrmDeal | null> {
-    this.throwNotImplemented('getDeal');
+  /**
+   * Loads a deal via Bitrix24 `crm.deal.get` (incoming webhook POST).
+   * Bitrix marks this method deprecated in favor of `crm.item.get` with smart-process IDs; this adapter still uses `crm.deal.get` for classic deal rows.
+   * @inheritdoc
+   */
+  public async getDeal(dealId: string): Promise<CrmDeal | null> {
+    const id = this.parsePositiveIntId('deal', dealId);
+    const payload = await this.postJson<BitrixRestSuccess<unknown> | BitrixRestFailure>('crm.deal.get', {
+      ID: id,
+    });
+    if ('error' in payload) {
+      const description = payload.error_description ?? '';
+      if (this.isDealNotFoundFailure(payload.error, description)) {
+        return null;
+      }
+      throw new Error(
+        `Bitrix24Client: crm.deal.get failed (${String(payload.error)}): ${description}`.trim(),
+      );
+    }
+    if (!isRecord(payload.result)) {
+      throw new Error('Bitrix24Client: crm.deal.get returned a non-object result.');
+    }
+    return mapBitrixDealRowToCrmDeal(payload.result);
   }
 
   /** @inheritdoc */
