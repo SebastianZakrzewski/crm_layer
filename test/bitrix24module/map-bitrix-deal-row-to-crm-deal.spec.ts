@@ -37,7 +37,7 @@ describe('mapBitrixDealRowToCrmDeal', () => {
       STAGE_ID: undefined,
       COMPANY_ID: '0',
     };
-    const actualResult = mapBitrixDealRowToCrmDeal(inputRow as Record<string, unknown>);
+    const actualResult = mapBitrixDealRowToCrmDeal(inputRow);
     expect(actualResult).toEqual({
       id: '55',
       name: 'Minimal',

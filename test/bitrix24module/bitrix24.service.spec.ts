@@ -10,7 +10,9 @@ describe('Bitrix24Service', () => {
     mockBitrix24Client = {
       getDeal: jest.fn(),
     };
-    service = new Bitrix24Service(mockBitrix24Client as unknown as Bitrix24Client);
+    service = new Bitrix24Service(
+      mockBitrix24Client as unknown as Bitrix24Client,
+    );
   });
 
   describe('getDeal', () => {

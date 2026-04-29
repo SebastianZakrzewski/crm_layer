@@ -10,9 +10,11 @@ describe('Bitrix24Client', () => {
 
   const createClient = (): Bitrix24Client => {
     const configService = {
-      get: jest.fn().mockImplementation((key: string) =>
-        key === BITRIX24_WEBHOOK_BASE_URL_ENV ? webhookBase : undefined,
-      ),
+      get: jest
+        .fn()
+        .mockImplementation((key: string) =>
+          key === BITRIX24_WEBHOOK_BASE_URL_ENV ? webhookBase : undefined,
+        ),
     } as unknown as ConfigService;
     return new Bitrix24Client(configService);
   };
@@ -26,20 +28,21 @@ describe('Bitrix24Client', () => {
     it('returns mapped deal when Bitrix REST succeeds', async () => {
       const client = createClient();
       const mockFetch = jest.fn().mockResolvedValue({
-        json: async () => ({
-          result: {
-            ID: '410',
-            TITLE: 'New Deal #1',
-            OPPORTUNITY: '1000000.00',
-            CURRENCY_ID: 'EUR',
-            STAGE_ID: 'PREPARATION',
-            COMPANY_ID: '9',
-            UF_CRM_1721244482250: 'Hello world!',
-          },
-          time: {},
-        }),
+        json: () =>
+          Promise.resolve({
+            result: {
+              ID: '410',
+              TITLE: 'New Deal #1',
+              OPPORTUNITY: '1000000.00',
+              CURRENCY_ID: 'EUR',
+              STAGE_ID: 'PREPARATION',
+              COMPANY_ID: '9',
+              UF_CRM_1721244482250: 'Hello world!',
+            },
+            time: {},
+          }),
       });
-      global.fetch = mockFetch as unknown as typeof fetch;
+      global.fetch = mockFetch;
       const actualResult = await client.getDeal('410');
       const expectedResult = {
         id: '410',
@@ -67,12 +70,13 @@ describe('Bitrix24Client', () => {
     it('returns null when Bitrix reports deal not found', async () => {
       const client = createClient();
       const mockFetch = jest.fn().mockResolvedValue({
-        json: async () => ({
-          error: 'ERROR_NOT_FOUND',
-          error_description: 'Not found',
-        }),
+        json: () =>
+          Promise.resolve({
+            error: 'ERROR_NOT_FOUND',
+            error_description: 'Not found',
+          }),
       });
-      global.fetch = mockFetch as unknown as typeof fetch;
+      global.fetch = mockFetch;
       const actualResult = await client.getDeal('999');
       expect(actualResult).toBeNull();
     });
@@ -95,21 +99,22 @@ describe('Bitrix24Client', () => {
     it('throws when Bitrix returns a non-not-found error', async () => {
       const client = createClient();
       const mockFetch = jest.fn().mockResolvedValue({
-        json: async () => ({
-          error: 'ACCESS_DENIED',
-          error_description: 'Access denied',
-        }),
+        json: () =>
+          Promise.resolve({
+            error: 'ACCESS_DENIED',
+            error_description: 'Access denied',
+          }),
       });
-      global.fetch = mockFetch as unknown as typeof fetch;
+      global.fetch = mockFetch;
       await expect(client.getDeal('1')).rejects.toThrow(/crm.deal.get failed/);
     });
 
     it('throws when result payload is not an object', async () => {
       const client = createClient();
       const mockFetch = jest.fn().mockResolvedValue({
-        json: async () => ({ result: null }),
+        json: () => Promise.resolve({ result: null }),
       });
-      global.fetch = mockFetch as unknown as typeof fetch;
+      global.fetch = mockFetch;
       await expect(client.getDeal('1')).rejects.toThrow(/non-object result/);
     });
   });

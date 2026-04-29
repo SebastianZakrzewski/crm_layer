@@ -14,7 +14,10 @@ export class Bitrix24Controller {
    * Lightweight health-style probe for routing and module wiring.
    */
   @Get('admin/test')
-  public adminTest(): Readonly<{ readonly ok: true; readonly provider: 'bitrix24' }> {
+  public adminTest(): Readonly<{
+    readonly ok: true;
+    readonly provider: 'bitrix24';
+  }> {
     return { ok: true, provider: 'bitrix24' };
   }
 
@@ -22,7 +25,9 @@ export class Bitrix24Controller {
    * Returns a normalized deal by Bitrix24 deal identifier.
    */
   @Get('deals/:dealId')
-  public async getDeal(@Param() params: GetBitrixDealParamsDto): Promise<CrmDeal> {
+  public async getDeal(
+    @Param() params: GetBitrixDealParamsDto,
+  ): Promise<CrmDeal> {
     const deal = await this.bitrix24Service.getDeal(params.dealId);
     if (deal === null) {
       throw new NotFoundException(`Deal "${params.dealId}" was not found.`);

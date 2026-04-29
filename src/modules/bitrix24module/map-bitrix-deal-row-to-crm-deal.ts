@@ -36,15 +36,24 @@ function normalizeBitrixCustomValue(
   if (value === null || value === undefined) {
     return null;
   }
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
     return value;
   }
   if (Array.isArray(value)) {
     if (value.every((item): item is string => typeof item === 'string')) {
-      return value as readonly string[];
+      return value;
     }
-    if (value.every((item): item is number => typeof item === 'number' && Number.isFinite(item))) {
-      return value as readonly number[];
+    if (
+      value.every(
+        (item): item is number =>
+          typeof item === 'number' && Number.isFinite(item),
+      )
+    ) {
+      return value;
     }
   }
   return undefined;
@@ -53,13 +62,19 @@ function normalizeBitrixCustomValue(
 /**
  * Maps a Bitrix24 `crm.deal.get` / `crm.deal.fields` style row to {@link CrmDeal}.
  */
-export function mapBitrixDealRowToCrmDeal(raw: Readonly<Record<string, unknown>>): CrmDeal {
+export function mapBitrixDealRowToCrmDeal(
+  raw: Readonly<Record<string, unknown>>,
+): CrmDeal {
   const idRaw = raw.ID;
   const id =
-    typeof idRaw === 'string' || typeof idRaw === 'number' ? String(idRaw).trim() : '';
+    typeof idRaw === 'string' || typeof idRaw === 'number'
+      ? String(idRaw).trim()
+      : '';
   const titleRaw = raw.TITLE;
   const name = typeof titleRaw === 'string' ? titleRaw : '';
-  const customEntries: Array<[string, NonNullable<CrmDeal['customFields']>[string]]> = [];
+  const customEntries: Array<
+    [string, NonNullable<CrmDeal['customFields']>[string]]
+  > = [];
   for (const [key, value] of Object.entries(raw)) {
     if (BITRIX_DEAL_CORE_FIELD_KEYS.has(key)) {
       continue;

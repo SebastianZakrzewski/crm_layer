@@ -11,7 +11,9 @@ describe('Bitrix24Controller', () => {
     mockBitrix24Service = {
       getDeal: jest.fn(),
     };
-    controller = new Bitrix24Controller(mockBitrix24Service as unknown as Bitrix24Service);
+    controller = new Bitrix24Controller(
+      mockBitrix24Service as unknown as Bitrix24Service,
+    );
   });
 
   describe('adminTest', () => {
@@ -42,7 +44,9 @@ describe('Bitrix24Controller', () => {
     it('throws NotFoundException when the service resolves null', async () => {
       const inputDealId = '999';
       mockBitrix24Service.getDeal.mockResolvedValue(null);
-      await expect(controller.getDeal({ dealId: inputDealId })).rejects.toThrow(NotFoundException);
+      await expect(controller.getDeal({ dealId: inputDealId })).rejects.toThrow(
+        NotFoundException,
+      );
       expect(mockBitrix24Service.getDeal).toHaveBeenCalledWith(inputDealId);
     });
   });

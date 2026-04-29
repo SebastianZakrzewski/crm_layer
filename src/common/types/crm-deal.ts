@@ -14,12 +14,7 @@ export type CrmDeal = Readonly<{
   readonly customFields?: Readonly<
     Record<
       string,
-      | string
-      | number
-      | boolean
-      | null
-      | readonly string[]
-      | readonly number[]
+      string | number | boolean | null | readonly string[] | readonly number[]
     >
   >;
 }>;

@@ -28,6 +28,8 @@ describe('App (e2e)', () => {
   });
 
   it('GET / returns 404 when no root route is registered', () => {
-    return request(app.getHttpServer() as Server).get('/').expect(404);
+    return request(app.getHttpServer() as Server)
+      .get('/')
+      .expect(404);
   });
 });

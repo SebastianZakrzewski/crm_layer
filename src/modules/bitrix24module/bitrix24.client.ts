@@ -18,7 +18,8 @@ import type { CrmListResult } from '@app/common/types/crm-list-result';
 import { mapBitrixDealRowToCrmDeal } from './map-bitrix-deal-row-to-crm-deal';
 
 /** Env key: full incoming webhook base URL up to the token segment (no trailing slash). */
-export const BITRIX24_WEBHOOK_BASE_URL_ENV = 'BITRIX24_WEBHOOK_BASE_URL' as const;
+export const BITRIX24_WEBHOOK_BASE_URL_ENV =
+  'BITRIX24_WEBHOOK_BASE_URL' as const;
 
 type BitrixRestSuccess<T> = Readonly<{ readonly result: T }>;
 type BitrixRestFailure = Readonly<{
@@ -63,7 +64,10 @@ export class Bitrix24Client extends AbstractCrmClient {
     return numeric;
   }
 
-  private isDealNotFoundFailure(error: string | number, description: string): boolean {
+  private isDealNotFoundFailure(
+    error: string | number,
+    description: string,
+  ): boolean {
     const normalizedDescription = description.toLowerCase();
     if (normalizedDescription.includes('not found')) {
       return true;
@@ -72,7 +76,10 @@ export class Bitrix24Client extends AbstractCrmClient {
     return normalizedError.includes('not_found') || normalizedError === '404';
   }
 
-  private async postJson<T>(methodPath: string, body: Readonly<Record<string, unknown>>): Promise<T> {
+  private async postJson<T>(
+    methodPath: string,
+    body: Readonly<Record<string, unknown>>,
+  ): Promise<T> {
     const url = `${this.getWebhookBaseUrl()}/${methodPath}`;
     const response = await fetch(url, {
       method: 'POST',
@@ -95,7 +102,9 @@ export class Bitrix24Client extends AbstractCrmClient {
   }
 
   /** @inheritdoc */
-  public listContacts(_options: CrmListOptions): Promise<CrmListResult<CrmContact>> {
+  public listContacts(
+    _options: CrmListOptions,
+  ): Promise<CrmListResult<CrmContact>> {
     this.throwNotImplemented('listContacts');
   }
 
@@ -118,7 +127,9 @@ export class Bitrix24Client extends AbstractCrmClient {
   }
 
   /** @inheritdoc */
-  public listCompanies(_options: CrmListOptions): Promise<CrmListResult<CrmCompany>> {
+  public listCompanies(
+    _options: CrmListOptions,
+  ): Promise<CrmListResult<CrmCompany>> {
     this.throwNotImplemented('listCompanies');
   }
 
@@ -152,7 +163,9 @@ export class Bitrix24Client extends AbstractCrmClient {
    */
   public async getDeal(dealId: string): Promise<CrmDeal | null> {
     const id = this.parsePositiveIntId('deal', dealId);
-    const payload = await this.postJson<BitrixRestSuccess<unknown> | BitrixRestFailure>('crm.deal.get', {
+    const payload = await this.postJson<
+      BitrixRestSuccess<unknown> | BitrixRestFailure
+    >('crm.deal.get', {
       ID: id,
     });
     if ('error' in payload) {
@@ -165,7 +178,9 @@ export class Bitrix24Client extends AbstractCrmClient {
       );
     }
     if (!isRecord(payload.result)) {
-      throw new Error('Bitrix24Client: crm.deal.get returned a non-object result.');
+      throw new Error(
+        'Bitrix24Client: crm.deal.get returned a non-object result.',
+      );
     }
     return mapBitrixDealRowToCrmDeal(payload.result);
   }
@@ -176,7 +191,10 @@ export class Bitrix24Client extends AbstractCrmClient {
   }
 
   /** @inheritdoc */
-  public updateDeal(_dealId: string, _input: CrmDealUpdateInput): Promise<CrmDeal> {
+  public updateDeal(
+    _dealId: string,
+    _input: CrmDealUpdateInput,
+  ): Promise<CrmDeal> {
     this.throwNotImplemented('updateDeal');
   }
 
@@ -196,7 +214,10 @@ export class Bitrix24Client extends AbstractCrmClient {
   }
 
   /** @inheritdoc */
-  public updateLead(_leadId: string, _input: CrmLeadUpdateInput): Promise<CrmLead> {
+  public updateLead(
+    _leadId: string,
+    _input: CrmLeadUpdateInput,
+  ): Promise<CrmLead> {
     this.throwNotImplemented('updateLead');
   }
 }
