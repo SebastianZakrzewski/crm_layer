@@ -1,0 +1,15 @@
+---
+description: Split git commits into narrow, single-purpose changes after substantive work
+alwaysApply: true
+---
+
+# Git commit granularity
+
+When changes are ready to commit (especially after a larger task):
+
+- **Prefer several small commits over one large commit.** Each commit should cover **one coherent slice** of work (one feature hook, one fix, one chore category, one docs-only update).
+- **Keep commit scope narrow:** reviewers and `git bisect` should be able to understand each commit in isolation. Avoid mixing unrelated edits (for example application code + unrelated Cursor rules + Docker files in the same commit unless they are truly inseparable).
+- **Split when there are multiple independent changes:** separate commits for distinct concerns (e.g. Bitrix24 API vs `.env.example` vs Docker vs tooling scripts vs Cursor rules).
+- **Write commit messages** that describe that slice accurately (conventional prefixes such as `feat`, `fix`, `chore`, `docs` are fine).
+
+If the user explicitly asks for a single squashed commit or a different strategy, follow their instructions.
