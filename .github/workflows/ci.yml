@@ -1,14 +1,17 @@
-# CI: lint, test, build. Deploy: after successful CI on main (push), SSH to server → git sync + Docker.
+# CI: lint, test, build. On push to main: build/push image to GHCR, then SSH deploy (pull + up, no git on server).
 #
 # Required repository Secrets (Settings → Secrets and variables → Actions):
 #   SSH_HOST           — VPS hostname or IP
-#   SSH_USER           — SSH login (must have permission to docker and project dir)
-#   SSH_PRIVATE_KEY    — PEM of a key authorized in ~/.ssh/authorized_keys on the server (no passphrase)
-#   SSH_DEPLOY_PATH    — absolute path to repo on server (e.g. /opt/crm_layer), clone + docker compose live here
+#   SSH_USER           — SSH login (docker group or sudo for docker compose)
+#   SSH_PRIVATE_KEY    — PEM private key (no passphrase) allowed in authorized_keys on the server
+#   SSH_DEPLOY_PATH    — absolute path to a directory that contains `docker-compose.prod.yml` and `.env` (no git clone required)
+# Optional Secrets (only if the GHCR package is private):
+#   GHCR_USERNAME       — GitHub username for docker login on the server
+#   GHCR_PULL_TOKEN     — PAT with read:packages
 # Notes:
-#   — Private repo on GitHub: configure a read-only deploy key (or HTTPS token) on the server so `git fetch` works.
-#   — SSH not on port 22: add under "with:" in the Deploy step: `port: YOUR_PORT`
-#   — Host key verification: see `host_key` in https://github.com/appleboy/ssh-action
+#   — First-time server setup: copy `docker-compose.prod.yml` and `.env` into SSH_DEPLOY_PATH once.
+#   — Make the GHCR package public (Packages → package → Package settings) OR set GHCR_* secrets so the server can pull.
+#   — Custom SSH port: add `port: N` under `with:` in the Deploy step (appleboy/ssh-action).
 
 name: CI
 
@@ -54,30 +57,68 @@ jobs:
       - name: Build
         run: npm run build
 
+  push-image:
+    name: Build and push image to GHCR
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Registry image URL
+        run: |
+          echo "IMAGE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]'):main" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   deploy:
     name: Deploy to server
-    needs: ci
-    if: >-
-      github.ref == 'refs/heads/main' &&
-      github.event_name == 'push'
+    needs: push-image
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-deploy
       cancel-in-progress: false
     steps:
-      - name: Deploy over SSH
+      - name: Deploy over SSH (pull image, restart stack)
+        env:
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_PULL_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
         uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GHCR_USERNAME,GHCR_PULL_TOKEN
           command_timeout: 20m
           script_stop: true
           script: |
             set -euo pipefail
             DEPLOY="${{ secrets.SSH_DEPLOY_PATH }}"
             cd "$DEPLOY"
-            git fetch origin main
-            git checkout main
-            git reset --hard origin/main
-            docker compose up -d --build
+            if [ -n "${GHCR_USERNAME:-}" ] && [ -n "${GHCR_PULL_TOKEN:-}" ]; then
+              echo "$GHCR_PULL_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            fi
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d

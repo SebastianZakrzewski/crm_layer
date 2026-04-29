@@ -1,0 +1,15 @@
+# Production: run pre-built image from GHCR (no local build). Place next to `.env` on the server.
+# Image is built and pushed by GitHub Actions on each push to `main`.
+# Override tag or registry: set `CRM_LAYER_IMAGE` in `.env`.
+
+services:
+  crm-layer:
+    image: ${CRM_LAYER_IMAGE:-ghcr.io/sebastianzakrzewski/crm_layer:main}
+    pull_policy: always
+    ports:
+      - "${PORT:-3001}:3001"
+    environment:
+      PORT: "${PORT:-3001}"
+      BITRIX24_WEBHOOK_BASE_URL: "${BITRIX24_WEBHOOK_BASE_URL:-}"
+      GH_TOKEN: "${GH_TOKEN:-}"
+    restart: unless-stopped
