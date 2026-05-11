@@ -1,15 +1,19 @@
 import { NotFoundException } from '@nestjs/common';
-import { Bitrix24Controller } from '@app/modules/bitrix24module/bitrix24.controller';
 import type { CrmDeal } from '@app/common/types/crm-deal';
+import type { DealFields } from '@app/common/types/crm-deal-fields';
+import { Bitrix24Controller } from '@app/modules/bitrix24module/bitrix24.controller';
 import { Bitrix24Service } from '@app/modules/bitrix24module/bitrix24.service';
 
 describe('Bitrix24Controller', () => {
   let controller: Bitrix24Controller;
-  let mockBitrix24Service: jest.Mocked<Pick<Bitrix24Service, 'getDeal'>>;
+  let mockBitrix24Service: jest.Mocked<
+    Pick<Bitrix24Service, 'getDeal' | 'getDealFields'>
+  >;
 
   beforeEach(() => {
     mockBitrix24Service = {
       getDeal: jest.fn(),
+      getDealFields: jest.fn(),
     };
     controller = new Bitrix24Controller(
       mockBitrix24Service as unknown as Bitrix24Service,
@@ -48,6 +52,31 @@ describe('Bitrix24Controller', () => {
         NotFoundException,
       );
       expect(mockBitrix24Service.getDeal).toHaveBeenCalledWith(inputDealId);
+    });
+  });
+
+  describe('getDealFields', () => {
+    it('returns DealFields when the service resolves data', async () => {
+      const inputDealId = '410';
+      const expectedFields: DealFields = {
+        dealId: '410',
+        fields: [{ fieldId: 'TITLE', label: 'Title', value: 'X' }],
+      };
+      mockBitrix24Service.getDealFields.mockResolvedValue(expectedFields);
+      const actualResult = await controller.getDealFields({
+        dealId: inputDealId,
+      });
+      expect(actualResult).toEqual(expectedFields);
+      expect(mockBitrix24Service.getDealFields).toHaveBeenCalledWith(
+        inputDealId,
+      );
+    });
+
+    it('throws NotFoundException when the service resolves null', async () => {
+      mockBitrix24Service.getDealFields.mockResolvedValue(null);
+      await expect(controller.getDealFields({ dealId: '999' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

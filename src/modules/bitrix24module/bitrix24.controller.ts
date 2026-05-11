@@ -1,5 +1,6 @@
 import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
 import type { CrmDeal } from '@app/common/types/crm-deal';
+import type { DealFields } from '@app/common/types/crm-deal-fields';
 import { GetBitrixDealParamsDto } from './models/get-bitrix-deal-params.dto';
 import { Bitrix24Service } from './bitrix24.service';
 
@@ -19,6 +20,20 @@ export class Bitrix24Controller {
     readonly provider: 'bitrix24';
   }> {
     return { ok: true, provider: 'bitrix24' };
+  }
+
+  /**
+   * Returns field rows for a deal (values and labels from the vendor catalog).
+   */
+  @Get('deals/:dealId/fields')
+  public async getDealFields(
+    @Param() params: GetBitrixDealParamsDto,
+  ): Promise<DealFields> {
+    const fields = await this.bitrix24Service.getDealFields(params.dealId);
+    if (fields === null) {
+      throw new NotFoundException(`Deal "${params.dealId}" was not found.`);
+    }
+    return fields;
   }
 
   /**

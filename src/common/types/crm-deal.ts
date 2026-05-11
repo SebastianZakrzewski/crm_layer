@@ -17,4 +17,8 @@ export type CrmDeal = Readonly<{
       string | number | boolean | null | readonly string[] | readonly number[]
     >
   >;
+  /**
+   * Bitrix API field id → label from `crm.deal.fields` (covers {@link customFields} keys and core keys ID, TITLE, …).
+   */
+  readonly fieldLabels?: Readonly<Record<string, string>>;
 }>;

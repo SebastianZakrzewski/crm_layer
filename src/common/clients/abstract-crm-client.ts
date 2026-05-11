@@ -5,6 +5,7 @@ import type { CrmContact } from '@app/common/types/crm-contact';
 import type { CrmContactCreateInput } from '@app/common/types/crm-contact-create-input';
 import type { CrmContactUpdateInput } from '@app/common/types/crm-contact-update-input';
 import type { CrmDeal } from '@app/common/types/crm-deal';
+import type { DealFields } from '@app/common/types/crm-deal-fields';
 import type { CrmDealCreateInput } from '@app/common/types/crm-deal-create-input';
 import type { CrmDealUpdateInput } from '@app/common/types/crm-deal-update-input';
 import type { CrmLead } from '@app/common/types/crm-lead';
@@ -87,6 +88,11 @@ export abstract class AbstractCrmClient {
    * Loads a single deal by provider-native identifier.
    */
   public abstract getDeal(dealId: string): Promise<CrmDeal | null>;
+
+  /**
+   * Loads normalized field rows for a deal (values plus catalog labels when available).
+   */
+  public abstract getFields(dealId: string): Promise<DealFields | null>;
 
   /**
    * Creates a new deal.

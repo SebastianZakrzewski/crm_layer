@@ -9,6 +9,7 @@ import type { CrmContactCreateInput } from '@app/common/types/crm-contact-create
 import type { CrmContactUpdateInput } from '@app/common/types/crm-contact-update-input';
 import type { CrmDeal } from '@app/common/types/crm-deal';
 import type { CrmDealCreateInput } from '@app/common/types/crm-deal-create-input';
+import type { DealFields } from '@app/common/types/crm-deal-fields';
 import type { CrmDealUpdateInput } from '@app/common/types/crm-deal-update-input';
 import type { CrmLead } from '@app/common/types/crm-lead';
 import type { CrmLeadCreateInput } from '@app/common/types/crm-lead-create-input';
@@ -16,6 +17,8 @@ import type { CrmLeadUpdateInput } from '@app/common/types/crm-lead-update-input
 import type { CrmListOptions } from '@app/common/types/crm-list-options';
 import type { CrmListResult } from '@app/common/types/crm-list-result';
 import { mapBitrixDealRowToCrmDeal } from './map-bitrix-deal-row-to-crm-deal';
+import { mapBitrixDealRowToDealFields } from './map-bitrix-deal-row-to-deal-fields';
+import { buildBitrixDealFieldDisplayNameMap } from './parse-bitrix-deal-fields-result';
 
 /** Env key: full incoming webhook base URL up to the token segment (no trailing slash). */
 export const BITRIX24_WEBHOOK_BASE_URL_ENV =
@@ -36,6 +39,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 @Injectable()
 export class Bitrix24Client extends AbstractCrmClient {
+  private dealFieldDisplayNameMapCache: Readonly<
+    Record<string, string>
+  > | null = null;
+  private dealFieldDisplayNameMapInFlight: Promise<
+    Readonly<Record<string, string>>
+  > | null = null;
+
   public constructor(private readonly configService: ConfigService) {
     super();
   }
@@ -94,6 +104,49 @@ export class Bitrix24Client extends AbstractCrmClient {
       throw new Error('Bitrix24Client: unexpected non-object REST response.');
     }
     return parsed as T;
+  }
+
+  private async loadCrmDealFieldDisplayNameMapFromApi(): Promise<
+    Readonly<Record<string, string>>
+  > {
+    const payload = await this.postJson<
+      BitrixRestSuccess<unknown> | BitrixRestFailure
+    >('crm.deal.fields', {});
+    if ('error' in payload) {
+      const description = payload.error_description ?? '';
+      throw new Error(
+        `Bitrix24Client: crm.deal.fields failed (${String(payload.error)}): ${description}`.trim(),
+      );
+    }
+    if (!isRecord(payload.result)) {
+      throw new Error(
+        'Bitrix24Client: crm.deal.fields returned a non-object result.',
+      );
+    }
+    return buildBitrixDealFieldDisplayNameMap(payload.result);
+  }
+
+  /**
+   * Bitrix `crm.deal.fields`: field id → display name (`formLabel` / `listLabel` / `title`).
+   * Result is cached per process after the first successful call.
+   */
+  public async getCrmDealFieldDisplayNameMap(): Promise<
+    Readonly<Record<string, string>>
+  > {
+    if (this.dealFieldDisplayNameMapCache !== null) {
+      return this.dealFieldDisplayNameMapCache;
+    }
+    if (this.dealFieldDisplayNameMapInFlight === null) {
+      this.dealFieldDisplayNameMapInFlight =
+        this.loadCrmDealFieldDisplayNameMapFromApi();
+    }
+    try {
+      const map = await this.dealFieldDisplayNameMapInFlight;
+      this.dealFieldDisplayNameMapCache = map;
+      return map;
+    } finally {
+      this.dealFieldDisplayNameMapInFlight = null;
+    }
   }
 
   /** @inheritdoc */
@@ -183,6 +236,35 @@ export class Bitrix24Client extends AbstractCrmClient {
       );
     }
     return mapBitrixDealRowToCrmDeal(payload.result);
+  }
+
+  /**
+   * Loads deal row metadata via `crm.deal.get`, attaches labels from cached `crm.deal.fields`.
+   * @inheritdoc
+   */
+  public async getFields(dealId: string): Promise<DealFields | null> {
+    const id = this.parsePositiveIntId('deal', dealId);
+    const payload = await this.postJson<
+      BitrixRestSuccess<unknown> | BitrixRestFailure
+    >('crm.deal.get', {
+      ID: id,
+    });
+    if ('error' in payload) {
+      const description = payload.error_description ?? '';
+      if (this.isDealNotFoundFailure(payload.error, description)) {
+        return null;
+      }
+      throw new Error(
+        `Bitrix24Client: crm.deal.get failed (${String(payload.error)}): ${description}`.trim(),
+      );
+    }
+    if (!isRecord(payload.result)) {
+      throw new Error(
+        'Bitrix24Client: crm.deal.get returned a non-object result.',
+      );
+    }
+    const labelMap = await this.getCrmDealFieldDisplayNameMap();
+    return mapBitrixDealRowToDealFields(payload.result, labelMap);
   }
 
   /** @inheritdoc */

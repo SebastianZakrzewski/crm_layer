@@ -1,6 +1,7 @@
 import type { CrmDeal } from '@app/common/types/crm-deal';
 
-const BITRIX_DEAL_CORE_FIELD_KEYS: ReadonlySet<string> = new Set([
+/** Bitrix deal row keys mapped to top-level {@link CrmDeal} properties (also used for `fieldLabels`). */
+export const BITRIX_DEAL_CORE_FIELD_KEYS: ReadonlySet<string> = new Set([
   'ID',
   'TITLE',
   'OPPORTUNITY',
